@@ -1,0 +1,133 @@
+enum UserStatus {
+    INVITED
+    VERIFIED
+}
+
+model User {
+    id               String            @id @default(uuid())
+    name             String?
+    email            String?           @unique
+    pictureUrl       String?           @default('https://i.imgur.com/ZdJSK3Y.jpeg')
+    tokenInvitation  String?
+
+    status           UserStatus        @default(VERIFIED)
+
+    // this is the role of the user for the application
+    globalRole       String            @default('USER')
+    password         String?           @password @omit
+    createdAt        DateTime          @default(now())
+    updatedAt        DateTime          @updatedAt @default(now())
+
+    socialAccounts   SocialAccount[]   @relation("user")
+    commentTemplates CommentTemplate[] @relation("user")
+    hashtags         Hashtag[]         @relation("user")
+    scheduleRules    ScheduleRule[]    @relation("user")
+    activityLogs     ActivityLog[]     @relation("user")
+
+    @@auth()
+    @@allow("all", auth().id == this.id)
+    @@allow('all', auth().globalRole == 'ADMIN')
+
+    //we only allow that user to register if they don't create an admin role
+    @@allow("create", globalRole != 'ADMIN')
+    @@allow("read", true)
+}
+
+model SocialAccount {
+
+    id            String         @id @default(uuid())
+    platform      String?
+    accountId     String?
+    accessToken   String?
+    status        String?
+    apiLimitCount Float?
+    apiLimitReset String?
+
+    userId        String?
+    user          User?          @relation(fields: [userId], references: [id], name: "user")
+
+    scheduleRules ScheduleRule[] @relation("socialAccount")
+    activityLogs  ActivityLog[]  @relation("socialAccount")
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model CommentTemplate {
+
+    id                      String         @id @default(uuid())
+    content                 String?
+    platform                String?
+    category                String?
+
+    userId                  String?
+    user                    User?          @relation(fields: [userId], references: [id], name: "user")
+
+    scheduleRulesAsTemplate ScheduleRule[] @relation("template")
+    activityLogsAsTemplate  ActivityLog[]  @relation("template")
+    createdAt               DateTime       @default(now())
+    updatedAt               DateTime       @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model Hashtag {
+
+    id                 String         @id @default(uuid())
+    name               String?
+    platform           String?
+    status             String?
+    monitoringSettings Json?
+
+    userId             String?
+    user               User?          @relation(fields: [userId], references: [id], name: "user")
+
+    scheduleRules      ScheduleRule[] @relation("hashtag")
+    activityLogs       ActivityLog[]  @relation("hashtag")
+    createdAt          DateTime       @default(now())
+    updatedAt          DateTime       @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model ScheduleRule {
+
+    id              String           @id @default(uuid())
+    frequency       Json?
+    status          String?
+
+    userId          String?
+    user            User?            @relation(fields: [userId], references: [id], name: "user")
+    hashtagId       String?
+    hashtag         Hashtag?         @relation(fields: [hashtagId], references: [id], name: "hashtag")
+    templateId      String?
+    template        CommentTemplate? @relation(fields: [templateId], references: [id], name: "template")
+    socialAccountId String?
+    socialAccount   SocialAccount?   @relation(fields: [socialAccountId], references: [id], name: "socialAccount")
+
+    createdAt       DateTime         @default(now())
+    updatedAt       DateTime         @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model ActivityLog {
+
+    id              String           @id @default(uuid())
+    postId          String?
+    commentId       String?
+    status          String?
+    errorMessage    String?
+    actionType      String?
+
+    userId          String?
+    user            User?            @relation(fields: [userId], references: [id], name: "user")
+    hashtagId       String?
+    hashtag         Hashtag?         @relation(fields: [hashtagId], references: [id], name: "hashtag")
+    socialAccountId String?
+    socialAccount   SocialAccount?   @relation(fields: [socialAccountId], references: [id], name: "socialAccount")
+    templateId      String?
+    template        CommentTemplate? @relation(fields: [templateId], references: [id], name: "template")
+
+    createdAt       DateTime         @default(now())
+    updatedAt       DateTime         @updatedAt @default(now())
+    @@allow("all", true)
+}
+
